@@ -131,6 +131,7 @@ class User {
         }
     // Sets activeUserSess, marking the session as active
     // When a user logs in sucessfully, this method updates their active session
+    // By having an IP in activeUserSess, it indicates that the user has an ongoing (active) session
         void setActiveSess(const string &IP){
           activeUserSess = IP;
         }
@@ -196,6 +197,7 @@ class User {
 
 class Bank {
     public:
+    // Bank constructor
         Bank(bool verbose)
           :isVerbose(verbose){
             numUsers = 0;
@@ -205,13 +207,15 @@ class Bank {
         size_t getNumUsers(){
           return numUsers;
         }
-
+    // Pass in user object
         void addUser(User newUser){
+    // myUsers is an unordered map where the key is user id and the object is user
           myUsers[newUser.getUserID()] = newUser;
           numUsers++;
         }
 
         User* getUser(const string &uID){
+        // returning an address here
           return &myUsers[uID];
         }
 
@@ -223,11 +227,14 @@ class Bank {
 
         bool login(const string &uID, const string &potPin, string IP){
           User* tempUser = getUser(uID);
+        // Checks if entered PIN matches stored PIN
           if(potPin == tempUser->getPin()){
             tempUser->setActiveSess(IP);
             tempUser->addIP(IP);
+              // returns true if sucess
             return true;
           }
+        // returns false if failure
           return false;
         }
 
@@ -241,40 +248,48 @@ class Bank {
         }
 
         bool placeTransaction(string &timestamp, string &IP, string &amount, string &exec_date, const string &feePayer, const string &sName, const string &rName){
-          //checks
+          // establishes limit of 3 days to ensure that the exec_date is not too far in the future
           uint64_t threedays = 3000000;
           //timestamp = timestamp.substr(0,2) + timestamp.substr(3,2) + timestamp.substr(6,2) + timestamp.substr(9,2) + timestamp.substr(12,2) + timestamp.substr(15,2);
           //exec_date = exec_date.substr(0,2) + exec_date.substr(3,2) + exec_date.substr(6,2) + exec_date.substr(9,2) + exec_date.substr(12,2) + exec_date.substr(15,2);
+        // converts exec_date and timestamp into c style strings that are stored in a char pointer cause of array decay
           const char* exec = exec_date.c_str();
           const char* time = timestamp.c_str();
+            // converts the c style strings into unit64_t integers
           uint64_t execnum = strtoull(exec, NULL, 10);
           uint64_t timenum = strtoull(time, NULL, 10);
           uint64_t difference = execnum - timenum;
           if(difference > threedays){
             if(isVerbose)
+                // TODO: update all error messages that are inlcuded in the error_messages.txt file
               cout << "Select a time less than three days in the future." << "\n";
             return false;
           }
+            // ensuring that the sender exists
           if(myUsers.find(sName) == myUsers.end()){
             if(isVerbose)
               cout << "Sender " << sName << " does not exist." << "\n";
             return false;
           }
+            // ensuring that the recipient exists
           if(myUsers.find(rName) == myUsers.end()){
             if(isVerbose)
               cout << "Recipient " << rName << " does not exist." << "\n";
             return false;
           }
+            // getUser returns address of user object
           User* sender = getUser(sName);
           User* recepient = getUser(rName);
+            // arrow used to access member of pointer or call functions
           string senderName = sender->getUserID();
           string recepientName = recepient->getUserID();
-
+            // ensures sender has registered
           if(execnum < sender->getStartTime()){
             if(isVerbose)
               cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
             return false;
           }
+            // ensures recipient has registered
           if(execnum < recepient->getStartTime()){
             if(isVerbose)
               cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
@@ -290,8 +305,8 @@ class Bank {
               cout << "Fraudulent transaction detected, aborting request." << "\n";
             return false;
           }
-
-
+            // Calls executeTransaction to process any pending transactions before adding a new one.
+            // timestamp read in from account file
           executeTransaction(timestamp);
 
           //makeTransaction
@@ -299,6 +314,7 @@ class Bank {
           uint64_t amtnum = strtoull(amt, NULL, 10);
           numTransactions++;
           Transaction trans = Transaction(timenum, senderName, recepientName, amtnum, execnum, exec_date, feePayer, numTransactions);
+            // myTransactions a PQ
           myTransactions.push(trans);
 
           if(isVerbose)
@@ -312,26 +328,32 @@ class Bank {
             return true;
           return false;
         }
-
+// executeTransaction processes transactions in the priority queue up to the specified timestamp.
         void executeTransaction(string &timestamp){
           while(!myTransactions.empty()){
             //timestamp = timestamp.substr(0,2) + timestamp.substr(3,2) + timestamp.substr(6,2) + timestamp.substr(9,2) + timestamp.substr(12,2) + timestamp.substr(15,2);
             const char* ctime = timestamp.c_str();
             uint64_t currentTime = strtoull(ctime, NULL, 10);
+              // The top() method retrieves the transaction with the highest priority (earliest execution time) from the priority queue.
             Transaction temp = myTransactions.top();
+              // The bool valid variable is used to track whether a transaction is eligible to be executed based on a series of checks (such as sufficient funds for both the sender and recipient). If any of these checks fail, valid is set to false, preventing the transaction from being executed.
             bool valid = true;
+              //  If the transaction’s execution time is greater than currentTime, it’s not yet ready to be processed, so the function returns early.
             if(temp.getExecTime() > currentTime)
               return;
             //fees o -- sender, s -- shared equally
+              // The transaction fee is calculated as 1% of the transaction amount, with a minimum of $10 and a maximum of $450.
             uint64_t fee = (temp.getAmount() * 1) / 100;
             if(fee < 10)
               fee = 10;
             else if(fee > 450)
               fee = 450;
             //discount
+              // temp a Transaction object
             uint64_t exectime = temp.getExecTime();
             User* sender = getUser(temp.getSender());
             User* recepient = getUser(temp.getRecepient());
+              // If the sender has been registered for more than 5 years (5 years in project-specific units), they receive a 25% discount on the fee, calculated as fee = (fee * 3) / 4.
             if((exectime - sender->getStartTime()) >= 50000000000)//5 years
               fee = (fee * 3) / 4;
             uint64_t senderFee = 0;
@@ -343,26 +365,30 @@ class Bank {
             else if(temp.getFeePayer() == "s"){//shared fee
               recepFee = fee / 2;
               senderFee = fee / 2;
-              if(fee%2 != 0){//odd
+              if(fee%2 != 0){//odd means sender pays the extra cent
                 senderFee++;
               }
             }
 
             //checking if enough money
+              // Sender: Must have enough for the transaction amount plus their share of the fee.
             if(sender->getBalance() < (senderFee + temp.getAmount())){
               if(isVerbose)
                 cout << "Insufficient funds to process transaction " << (temp.getTransID() - 1) << "." << "\n";
+                // If either party lacks sufficient funds, the transaction is marked invalid and removed from the queue without executing.
               myTransactions.pop();
               valid = false;
             }
+              // Recipient: Must have enough for their share of the fee.
             else if(recepient->getBalance() < recepFee){
               if(isVerbose)
                 cout << "Insufficient funds to process transaction " << (temp.getTransID() - 1) << "." << "\n";
+                // If either party lacks sufficient funds, the transaction is marked invalid and removed from the queue without executing.
               myTransactions.pop();
               valid = false;
             }
             if(valid){
-              //making exchange
+              //making exchange and updating balances
               sender->removeMoney(temp.getAmount() + senderFee);
               recepient->removeMoney(recepFee);
               recepient->addMoney(temp.getAmount());
@@ -372,10 +398,13 @@ class Bank {
               }
 
               myTransactions.pop();
+                // transaction temp now stores the fee amount, which will be used in future queries or summaries.
               temp.setFee(fee);
+                // queryList is a vector<Transaction> that keeps a history of all executed transactions. Adding temp to queryList ensures that this transaction can be accessed later for queries such as listing transactions within a specific time range or calculating bank revenue.
               queryList.push_back(temp);
-
+                // The addOutgoing function records the transaction temp in the sender’s outgoing vector (a part of the User class). This allows the bank to retrieve a history of all transactions sent by the user, which is useful for generating transaction summaries or account histories.
               sender->addOutgoing(temp);
+                // The addIncoming function records temp in the recipient’s incoming vector (also part of the User class). This allows the recipient’s account to show a record of all funds received, useful for query functions that generate account histories.
               recepient->addIncoming(temp);
             }
           }
