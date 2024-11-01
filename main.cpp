@@ -409,8 +409,10 @@ class Bank {
             }
           }
         }
-
+// The ListTransactions function in the Bank class is designed to display a list of transactions that occurred within a specified time range.
+    // The function takes two string references, startTime and endTime, which represent the time range for the transactions to be listed. Each timestamp is in the format yy:mm:dd:hh:mm:ss
         void ListTransactions(string &startTime, string &endTime){
+            // skips all colons
           string temptime1 = startTime.substr(0,2) + startTime.substr(3,2) + startTime.substr(6,2) + startTime.substr(9,2) + startTime.substr(12,2) + startTime.substr(15,2);
           const char* ctime1 = temptime1.c_str();
           uint64_t start = strtoull(ctime1, NULL, 10);
@@ -418,15 +420,19 @@ class Bank {
           string temptime2 = endTime.substr(0,2) + endTime.substr(3,2) + endTime.substr(6,2) + endTime.substr(9,2) + endTime.substr(12,2) + endTime.substr(15,2);
           const char* ctime2 = temptime2.c_str();
           uint64_t end = strtoull(ctime2, NULL, 10);
-
+// count keeps track of how many transactions fall within the specified range
           int count = 0;
+            // Iterates over each transaction in queryList, which stores all executed transactions
           for(size_t i = 0; i < queryList.size(); ++i){
             Transaction* temp = &queryList[i];
             uint64_t time = temp->getExecTime();
             if(start <= time && time < end){
               string d = "dollar";
               if(temp->getAmount() > 1 || temp->getAmount() == 0)
+                  //pluralizing dollar
                 d += 's';
+                // we use numTransactions as transID it is indexed by 1 and we are formatting output to index 0
+                // Transaction trans = Transaction(timenum, senderName, recepientName, amtnum, execnum, exec_date, feePayer, numTransactions); (line 316)
               cout << (temp->getTransID() - 1) << ": " << temp->getSender() << " sent " << temp->getAmount() << " " << d << " to " << temp->getRecepient() << " at " << temp->getExecTime() << "." << '\n';
               count++;
             }
@@ -434,6 +440,7 @@ class Bank {
 
           string t = "transaction";
           if(count > 1 || count == 0){
+              // pluralizing transaction
             t += 's';
             cout << "There were " << count <<  " " << t << " that were placed between time " << start << " to " << end << "." << '\n';
           }
@@ -441,12 +448,15 @@ class Bank {
             cout << "There was " << count <<  " " << t << " that was placed between time " << start << " to " << end << "." << '\n';
           }
         }
-
+// The calcRevenue function in the Bank class calculates the bank’s revenue from transaction fees over a specified time range
+    // It iterates through the bank’s list of executed transactions (queryList) and sums up the fees for all transactions that occurred within the specified time window
         uint64_t calcRevenue(uint64_t start, uint64_t end, bool isExec){
           uint64_t revenue = 0;
           for(size_t i = 0; i < queryList.size(); ++i){
             Transaction* temp = &queryList[i];
             uint64_t time = 0;
+              // A boolean indicating whether to use the transaction’s execution time or placement time for comparison.
+              // This choice allows flexibility in revenue calculation, letting the function calculate revenue based on when transactions were placed or when they were executed.
             if(isExec)
               time = temp->getExecTime();
             else
@@ -466,7 +476,7 @@ class Bank {
           string temptime2 = endTime.substr(0,2) + endTime.substr(3,2) + endTime.substr(6,2) + endTime.substr(9,2) + endTime.substr(12,2) + endTime.substr(15,2);
           const char* ctime2 = temptime2.c_str();
           uint64_t end = strtoull(ctime2, NULL, 10);
-
+// isExec (set to true) means calcRevenue will use each transaction’s execution time when determining if it falls within the range.
           uint64_t revenue = calcRevenue(start, end, true);
 
           uint64_t time = end - start;
@@ -474,42 +484,49 @@ class Bank {
           vector<string> times = {"second", "minute", "hour", "day", "month", "year"};
           size_t i = 0;
           while(time > 0){
+              // The loop extracts each component of time (e.g., seconds, minutes, etc.) by taking the last two digits (time % 100) and appending the corresponding unit from the times vector.
             uint64_t num = time % 100;
             if(num > 1)
-              output = to_string(num) + " " + times[i] + "s " + output;
+              output = to_string(num) + " " + times[i] + "s " + output; // pluralize
             else if(num == 1)
               output = to_string(num) + " " + times[i] + " " + output;
-            
+            // removes the last two digits from the time variable. decimal shaved off from integer division.
             time /= 100;
             ++i;
           }
-          if(start != end)
+          if(start != end) //removes the extra trailing space if start and end differ.
             output.pop_back();
 
           cout << "281Bank has collected " << revenue << " dollars in fees over " << output << "." << '\n';
         }
-
+// The CustomerHistory function in the Bank class displays a summary of a specific user’s account history, including their balance, total number of transactions, and recent incoming and outgoing transactions
         void CustomerHistory(string &user){
           //user does not exist
+            // if user does not exis then find returns an iterator equal to myUsers.end(), which is a special iterator representing “one past the end” of the container.
           if(myUsers.find(user) == myUsers.end()){
             cout << "User " << user << " does not exist." << '\n';
             return;
           }
 
           User* thisUser = getUser(user);
+            // getIncoming() retrieves a vector of all transactions in which this user is the recipient.
           vector<Transaction> tempin = thisUser->getIncoming();
+            // getOutgoing() retrieves a vector of all transactions where this user is the sender.
           vector<Transaction> tempout = thisUser->getOutgoing();
 
           cout << "Customer " << user << " account summary:" << '\n';
           cout << "Balance: $" << thisUser->getBalance() << '\n';
           cout << "Total # of transactions: " << (tempin.size() + tempout.size()) << '\n';
+            // expression used a couple of time so create a variable for it
           size_t insize = tempin.size();
           cout << "Incoming " << insize << ":" << '\n';
 
           size_t start = 0;
+            // display the 10 most recent incoming transactions
           if(insize > 10)
             start = insize - 10;
           while(start < insize){
+              // vectors support random access; temppin is a vector of transactions
             Transaction* temp = &tempin[start];
             string d = "dollar";
             if(temp->getAmount() > 1 || temp->getAmount() == 0)
