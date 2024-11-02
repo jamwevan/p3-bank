@@ -549,17 +549,20 @@ class Bank {
             start++;
           }
         }
-
+// The SummarizeDay function in the Bank class provides a summary of all transactions that occurred within a specific day
         void SummarizeDay(string timestamp){
           timestamp = timestamp.substr(0,2) + timestamp.substr(3,2) + timestamp.substr(6,2) + timestamp.substr(9,2) + timestamp.substr(12,2) + timestamp.substr(15,2);
           const char* ctime = timestamp.c_str();
           uint64_t time = strtoull(ctime, NULL, 10);
+            // The start of the day is calculated by setting the hour, minute, and second components to zero. This is done by subtracting the remainder when time is divided by 1000000.
           uint64_t start = time - (time % 1000000);
+            // The end of the day is calculated by adding 1000000 to start, which adds 24 hours and represents the beginning of the following day.
           uint64_t end = time - (time % 1000000) + 1000000;
 
           cout << "Summary of [" << start << ", " << end << "):" << '\n';
           
           int count = 0;
+            // queryList contains all of the executed transactions
           for(size_t i = 0; i < queryList.size(); ++i){
             Transaction* temp = &queryList[i];
             uint64_t time = temp->getExecTime();
@@ -599,17 +602,26 @@ class Bank {
 
 void getMode(int argc, char * argv[], bool &isVerbose, string &filename) {
   // These are used with getopt_long()
-  opterr = false; // Let us handle all error output for command line options
+    //  This line tells getopt_long not to automatically print error messages for unrecognized options, allowing the program to handle error messages manually.
+  opterr = false;
+    // choice is used to store the result of each parsed option from getopt_long.
   int choice;
+    // index keeps track of the index of the long option found.
   int index = 0;
+    // long_options is an array of option structures that are defined in the following lines
   option long_options[] = {
     { "help",  no_argument,       nullptr, 'h'  },
     { "file",  required_argument, nullptr, 'f'  },
     { "verbose", no_argument,     nullptr, 'v'},
+      // terminator for long_options
     { nullptr, 0,                 nullptr, '\0' }
   };  // long_options[]
-
+// If getopt_long successfully identifies an option, it returns the option’s corresponding character h, f, or v
+    // the character is implicitly converted to its integer representation when initializing choice
+    // If there are no more options to process, it returns -1.
+    // Each time the loop iterates, getopt_long processes the next option:
   while ((choice = getopt_long(argc, argv, "hf:v", long_options, &index)) != -1) {
+      // Based on the value of choice, the function handles each option:
     switch (choice) {
       case 'h':
         cout << "This program simulates EECS281 bank.\n";
@@ -617,7 +629,11 @@ void getMode(int argc, char * argv[], bool &isVerbose, string &filename) {
         exit(0);
       case 'f':{
         //looking for filename and using options to set found one and saving the filename in string
+          // optarg is a global variable provided by getopt_long that holds the argument value for options that require one and it is overwritten when ecountering another option that requires an argument
+          // std::string has a constructor that accepts a const char* parameter. This constructor creates a new std::string object from the contents of the C-style string.
+          // The syntax string arg{optarg}; uses brace initialization to call this constructor, creating arg as a std::string with the same content as optarg.
         string arg{optarg};
+          // only txt files can be accepted
         if(arg[arg.length() - 1] == 't')
             filename = arg;
         break;
@@ -632,7 +648,13 @@ void getMode(int argc, char * argv[], bool &isVerbose, string &filename) {
       }  // switch ..choice
   } // while
 }  // getMode()
+// The getopt_long function is able to return a different character for each iteration because it maintains an internal state between calls.
+// getopt_long’s ability to return a different character each iteration is due to its internal tracking of optind
+// getopt_long checks argv[optind]
+// optind is a global variable
 
+// TODO: You only need to use index if you want to differentiate between options by their position in the long_options array. For example, index would be useful if multiple options shared the same character or if you wanted to handle each long option in a unique way based on its position.
+// TODO: remove index and replace it will nullptr
 int main(int argc, char* argv[]) {
     // This should be in all of your projects, speeds up I/O
     ios_base::sync_with_stdio(false);
@@ -640,6 +662,7 @@ int main(int argc, char* argv[]) {
     bool isVerbose = false;
     string fileName;
     getMode(argc, argv, isVerbose, fileName);
+    // the filename was passed by reference
     if(fileName.empty()){
         cerr << "filename has not been specified" << endl;
         exit(1);
@@ -648,6 +671,7 @@ int main(int argc, char* argv[]) {
     Bank myBank = Bank(isVerbose);
 
     //reading in reg file
+    // ifstream constructor specifying the file and the fact we are reading
     ifstream regfile(fileName, ifstream::in);
     if(regfile.good()){
         while(regfile){//still more to read
@@ -657,6 +681,7 @@ int main(int argc, char* argv[]) {
             string pin;
             string tempnum;
             uint64_t balance;
+            // getline(regfile, temptime, '|'); reads a portion of the line up to the first | character and stores it in temptime.
             getline(regfile, temptime, '|');//time
             if(temptime.empty())
               break;
@@ -683,19 +708,23 @@ int main(int argc, char* argv[]) {
   uint64_t prevPlaceTime = 0;
   int placed = 0;
   string currTime;
-    
+    // There are two files one registration file and one command file
   //bank time!
+    // When running the program from the command line, you can redirect cin to read from a file by using <.
+    // ./program < command_file.txt
   if(!cin.fail()){//stuff to read
     string junk;
     string temp;
     //operations
     cin >> temp;
+      // The operations section ends with $$$, followed by the queries (if any).
     while(temp != "$$$"){
       switch(temp[0]){
         case '#':{
           getline(cin, junk);
           break;
         }//comment
+              // log in
         case 'l':{
           string uID;
           string pin;
@@ -713,7 +742,7 @@ int main(int argc, char* argv[]) {
               cout << "Failed to log in " << uID << "." << "\n";
           }
           break;
-        }//login
+        }// log out (o)ut
         case 'o':{
           string uID;
           string IP;
@@ -730,6 +759,7 @@ int main(int argc, char* argv[]) {
           }
           break;
         }//out
+              // place
         case 'p':{
           string timestamp;
           string IP;
@@ -773,15 +803,19 @@ int main(int argc, char* argv[]) {
       //myBank.executeTransactions();
       cin >> temp;
     }
+      // setting a high time lets executeTransaction to process all pending transactions
     while(myBank.hasTransactions()){
       string maxTime = "999999999999";
       myBank.executeTransaction(maxTime);
     }
     //$$$
     cin >> temp;
+      
     //query
+      
     while(!cin.fail()){//theres more to read in commands file
       switch(temp[0]){
+              // list transactions (make sure to do 0-indexed!!)
         case 'l':{
           string starttime;
           string endtime;
@@ -789,7 +823,8 @@ int main(int argc, char* argv[]) {
           cin >> endtime;
           myBank.ListTransactions(starttime, endtime);
           break;
-        }//list transactions (make sure to do 0-indexed!!)
+        }
+              //bank revenus
         case 'r':{
           string starttime;
           string endtime;
@@ -797,19 +832,21 @@ int main(int argc, char* argv[]) {
           cin >> endtime;
           myBank.BankRevenue(starttime, endtime);
           break;
-        }//bank revenus
+        }
+              //customer history
         case 'h':{
           string user;
           cin >> user;
           myBank.CustomerHistory(user);
           break;
-        }//customer history
+        }
+              //summarize day
         case 's':{
           string day;
           cin >> day;
           myBank.SummarizeDay(day);
           break;
-        }//summarize day
+        }
       }
       cin >> temp;
     }
