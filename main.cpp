@@ -246,6 +246,37 @@ class Bank {
           }
           return false;
         }
+    
+        void checkBalance(const string &userID, const string &IP) {
+            // Check if the user exists
+            auto it = myUsers.find(userID);
+            if (it == myUsers.end()) {
+                if (isVerbose) {
+                    cout << "Account " << userID << " does not exist." << endl;
+                }
+                return;
+            }
+            User* user = &it->second;
+            // Check if the user is logged in
+            if (!user->isLoggedIn()) {
+                if (isVerbose) {
+                    cout << "Account " << userID << " is not logged in." << endl;
+                }
+                return;
+            }
+            // Check for fraudulent IP
+            if (!user->validIP(IP)) {
+                if (isVerbose) {
+                    cout << "Fraudulent transaction detected, aborting request." << endl;
+                }
+                return;
+            }
+            // Determine the timestamp to use: mostRecentTimestamp or registration timestamp
+            uint64_t displayTimestamp = (mostRecentTimestamp != 0) ? mostRecentTimestamp : user->getStartTime();
+
+            // Display balance if all checks passed
+            cout << "As of " << displayTimestamp << ", " << userID << " has a balance of $" << user->getBalance() << "." << endl;
+        }
 
         bool placeTransaction(string &timestamp, string &IP, string &amount, string &exec_date, const string &feePayer, const string &sName, const string &rName){
           // establishes limit of 3 days to ensure that the exec_date is not too far in the future
@@ -258,11 +289,20 @@ class Bank {
             // converts the c style strings into unit64_t integers
           uint64_t execnum = strtoull(exec, NULL, 10);
           uint64_t timenum = strtoull(time, NULL, 10);
+          mostRecentTimestamp = timenum;
           uint64_t difference = execnum - timenum;
+          if (sName == rName) {
+              if (isVerbose) {
+                  cout << "Self transactions are not allowed." << "\n";
+              }
+              else {
+                  return false;
+              }
+          }
           if(difference > threedays){
             if(isVerbose)
                 // TODO: update all error messages that are inlcuded in the error_messages.txt file
-              cout << "Select a time less than three days in the future." << "\n";
+              cout << "Select a time up to three days in the future." << "\n";
             return false;
           }
             // ensuring that the sender exists
@@ -318,7 +358,7 @@ class Bank {
           myTransactions.push(trans);
 
           if(isVerbose)
-            cout << "Transaction placed at " << timenum << ": $" << amount << " from " << sender->getUserID() << " to " << recepient->getUserID() << " at " << execnum << "." << "\n";
+              cout << "Transaction " << (trans.getTransID() - 1) << " placed at " << timenum << ": $" << amount << " from " << sender->getUserID() << " to " << recepient->getUserID() << " at " << execnum << "." << "\n";
             
           return true;
         }
@@ -394,7 +434,7 @@ class Bank {
               recepient->addMoney(temp.getAmount());
               
               if(isVerbose){
-                cout << "Transaction executed at " << temp.getExecTime() << ": $" << temp.getAmount() << " from " << sender->getUserID() << " to " << recepient->getUserID() << "." << "\n";
+                  cout << "Transaction " << (temp.getTransID() - 1) << " executed at " << temp.getExecTime() << ": $" << temp.getAmount() << " from " << sender->getUserID() << " to " << recepient->getUserID() << "." << "\n";
               }
 
               myTransactions.pop();
@@ -597,6 +637,7 @@ class Bank {
         size_t numTransactions;
         priority_queue<Transaction, vector<Transaction>, TransactionCompare> myTransactions;
         vector<Transaction> queryList;
+        uint64_t mostRecentTimestamp;
 };
 
 
@@ -700,11 +741,15 @@ int main(int argc, char* argv[]) {
 
     }
     else{
-        cerr << "File could not be opened!" << endl;
+        cerr << "Registration file failed to open." << endl;
         exit(1);
     }
     regfile.close();
   
+  if (cin.fail()) {
+      cerr << "Error: Reading from cin has failed" << endl;
+    exit(1);
+  }
   uint64_t prevPlaceTime = 0;
   int placed = 0;
   string currTime;
@@ -739,7 +784,7 @@ int main(int argc, char* argv[]) {
           }
           else{
             if(isVerbose)
-              cout << "Failed to log in " << uID << "." << "\n";
+              cout << "Login failed for " << uID << "." << "\n";
           }
           break;
         }// log out (o)ut
@@ -755,10 +800,17 @@ int main(int argc, char* argv[]) {
           }
           else{
             if(isVerbose)
-              cout << "Failed to log out " << uID << "." << "\n";
+              cout << "Logout failed for " << uID << "." << "\n";
           }
           break;
         }//out
+              // balance command
+        case 'b': {
+           string userID, IP;
+           cin >> userID >> IP;
+           myBank.checkBalance(userID, IP);
+           break;
+        }
               // place
         case 'p':{
           string timestamp;
