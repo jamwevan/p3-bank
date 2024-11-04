@@ -18,49 +18,49 @@ using namespace std;
 class Transaction
 {
   public:
-    Transaction(uint64_t time, const string &sender, const string &recepient, uint64_t amount, uint64_t exec, const string &execdate, const string &feePayer, size_t transID)
-    :placementTime(time), sender(sender), recepient(recepient), amount(amount), exectime(exec),  execdate(execdate), feePayer(feePayer), transID(transID) {
+    Transaction(uint64_t placement_time, const string &sender, const string &recepient, uint64_t amount, uint64_t exec_time, const string &exec_date, const string &fee_payer, size_t trans_ID)
+    :placement_time(placement_time), sender(sender), recepient(recepient), amount(amount), exec_time(exec_time),  exec_date(exec_date), fee_payer(fee_payer), trans_ID(trans_ID) {
       fee = 0;
     }
-    uint64_t getPlacementTime() const{
-      return placementTime;
+    uint64_t get_placement_time() const{
+      return placement_time;
     }
-    string getSender() {
+    string get_sender() {
       return sender;
     }
-    string getRecepient() {
+    string get_recepient() {
       return recepient;
     }
-    uint64_t getAmount() const{
+    uint64_t get_amount() const{
       return amount;
     }
-    uint64_t getExecTime() const{
-      return exectime;
+    uint64_t get_exec_time() const{
+      return exec_time;
     }
-    string getExecDate() const{
-      return execdate;
+    string get_exec_date() const{
+      return exec_date;
     }
-    string getFeePayer() const{
-      return feePayer;
+    string get_fee_payer() const{
+      return fee_payer;
     }
-    size_t getTransID() const{
-      return transID;
+    size_t get_trans_ID() const{
+      return trans_ID;
     }
-    uint64_t getFee() const{
+    uint64_t get_fee() const{
       return fee;
     }
     void setFee(uint64_t bankFee){
       fee = bankFee;
     }
   private:
-    uint64_t placementTime;
+    uint64_t placement_time;
     string sender;
     string recepient;
     uint64_t amount;
-    uint64_t exectime;
-    string execdate;
-    string feePayer;
-    size_t transID;
+    uint64_t exec_time;
+    string exec_date;
+    string fee_payer;
+    size_t trans_ID;
     uint64_t fee;
 };
 
@@ -68,15 +68,15 @@ class Transaction
 class TransactionCompare
 {
   public:
-  bool operator() (Transaction const &trans1, Transaction const &trans2) {
+  bool operator() (Transaction const &trans_l, Transaction const &trans_r) {
     // The statement "If L < R then return false" implies that this is a min heap.
-    if (trans1.getExecTime() < trans2.getExecTime()) {
+    if (trans_l.get_exec_time() < trans_r.get_exec_time()) {
         return false;
     }
     // Second condition to break ties.
-    else if (trans1.getExecTime() == trans2.getExecTime()) {
+    else if (trans_l.get_exec_time() == trans_r.get_exec_time()) {
         // This is a min heap.
-        if (trans1.getTransID() < trans2.getTransID()) {
+        if (trans_l.get_trans_ID() < trans_r.get_trans_ID()) {
             return false;
         }
         else {
@@ -355,7 +355,7 @@ class Bank {
           // myTransactions a PQ.
           myTransactions.push(trans);
           if(isVerbose) {
-              cout << "Transaction " << (trans.getTransID() - 1) << " placed at " << timenum << ": $" << amount << " from " << sender->getUserID() << " to " << recepient->getUserID() << " at " << execnum << "." << "\n";
+              cout << "Transaction " << (trans.get_trans_ID() - 1) << " placed at " << timenum << ": $" << amount << " from " << sender->getUserID() << " to " << recepient->getUserID() << " at " << execnum << "." << "\n";
           }
           return true;
         }
@@ -380,12 +380,12 @@ class Bank {
             */
             bool valid = true;
               //  If the transaction’s execution time is greater than currentTime, it’s not yet ready to be processed, so the function returns early and does nothing.
-            if (temp.getExecTime() > currentTime) {
+            if (temp.get_exec_time() > currentTime) {
                 return;
             }
             //o := sender, s := shared equally
             // The transaction fee is calculated as 1% of the transaction amount, with a minimum of $10 and a maximum of $450.
-            uint64_t fee = (temp.getAmount() * 1) / 100;
+            uint64_t fee = (temp.get_amount() * 1) / 100;
             if (fee < 10) {
                 fee = 10;
             }
@@ -393,9 +393,9 @@ class Bank {
                 fee = 450;
             }
             // The variable temp is a Transaction object.
-            uint64_t exectime = temp.getExecTime();
-            User* sender = getUser(temp.getSender());
-            User* recepient = getUser(temp.getRecepient());
+            uint64_t exectime = temp.get_exec_time();
+            User* sender = getUser(temp.get_sender());
+            User* recepient = getUser(temp.get_recepient());
             // If the sender has been registered for more than 5 years, they receive a 25% discount on the fee.
             // 50000000000) := 5 years
             if ((exectime - sender->getStartTime()) >= 50000000000) {
@@ -403,11 +403,11 @@ class Bank {
             }
             uint64_t senderFee = 0;
             uint64_t recepFee = 0;
-            if (temp.getFeePayer() == "o") {
+            if (temp.get_fee_payer() == "o") {
               senderFee = fee;
               recepFee = 0;
             }
-            else if (temp.getFeePayer() == "s") {//shared fee
+            else if (temp.get_fee_payer() == "s") {//shared fee
               recepFee = fee / 2;
               senderFee = fee / 2;
               if (fee%2 != 0) {//odd means sender pays the extra cent
@@ -415,9 +415,9 @@ class Bank {
               }
             }
             // The sender must have enough for the transaction amount plus their share of the fee.
-            if (sender->getBalance() < (senderFee + temp.getAmount())) {
+            if (sender->getBalance() < (senderFee + temp.get_amount())) {
                 if (isVerbose) {
-                    cout << "Insufficient funds to process transaction " << (temp.getTransID() - 1) << "." << "\n";
+                    cout << "Insufficient funds to process transaction " << (temp.get_trans_ID() - 1) << "." << "\n";
                 }
                 // If either party lacks sufficient funds, the transaction is marked not valid and removed from the queue without executing.
               myTransactions.pop();
@@ -426,18 +426,18 @@ class Bank {
             // The recipient must have enough for their share of the fee.
             else if (recepient->getBalance() < recepFee) {
                 if (isVerbose) {
-                    cout << "Insufficient funds to process transaction " << (temp.getTransID() - 1) << "." << "\n";
+                    cout << "Insufficient funds to process transaction " << (temp.get_trans_ID() - 1) << "." << "\n";
                 }
                 // If either party lacks sufficient funds, the transaction is marked not valid and removed from the queue without executing.
               myTransactions.pop();
               valid = false;
             }
             if (valid) {
-              sender->removeMoney(temp.getAmount() + senderFee);
+              sender->removeMoney(temp.get_amount() + senderFee);
               recepient->removeMoney(recepFee);
-              recepient->addMoney(temp.getAmount());
+              recepient->addMoney(temp.get_amount());
               if (isVerbose) {
-                  cout << "Transaction " << (temp.getTransID() - 1) << " executed at " << temp.getExecTime() << ": $" << temp.getAmount() << " from " << sender->getUserID() << " to " << recepient->getUserID() << "." << "\n";
+                  cout << "Transaction " << (temp.get_trans_ID() - 1) << " executed at " << temp.get_exec_time() << ": $" << temp.get_amount() << " from " << sender->getUserID() << " to " << recepient->getUserID() << "." << "\n";
               }
 
               myTransactions.pop();
@@ -478,15 +478,15 @@ class Bank {
           // The loop iterates over each transaction in queryList, which is a vector of Transactions that stores all executed transactions.
           for(size_t i = 0; i < queryList.size(); ++i){
             Transaction* temp = &queryList[i];
-            uint64_t time = temp->getExecTime();
+            uint64_t time = temp->get_exec_time();
             if (start <= time && time < end) {
               string d = "dollar";
-              if (temp->getAmount() > 1 || temp->getAmount() == 0) {
+              if (temp->get_amount() > 1 || temp->get_amount() == 0) {
                   // Pluralizing dollar when it is appropriate to do so.
                   d += 's';
               }
               // we use numTransactions as transID it is indexed by 1 and we are formatting output to index 0
-            cout << (temp->getTransID() - 1) << ": " << temp->getSender() << " sent " << temp->getAmount() << " " << d << " to " << temp->getRecepient() << " at " << temp->getExecTime() << "." << '\n';
+            cout << (temp->get_trans_ID() - 1) << ": " << temp->get_sender() << " sent " << temp->get_amount() << " " << d << " to " << temp->get_recepient() << " at " << temp->get_exec_time() << "." << '\n';
             count++;
             }
           }
@@ -515,11 +515,11 @@ class Bank {
              It lets the function calculate revenue based on when transactions were placed or when they were executed.
             */
             if(isExec)
-              time = temp->getExecTime();
+              time = temp->get_exec_time();
             else
-              time = temp->getPlacementTime();
+              time = temp->get_placement_time();
             if(start <= time && time < end){
-              revenue += temp->getFee();
+              revenue += temp->get_fee();
             }
           }
           return revenue;
@@ -586,10 +586,10 @@ class Bank {
           // Vectors support random access!
             Transaction* temp = &tempin[start];
             string d = "dollar";
-            if (temp->getAmount() > 1 || temp->getAmount() == 0) {
+            if (temp->get_amount() > 1 || temp->get_amount() == 0) {
                 d += "s";
             }
-            cout << (temp->getTransID() - 1) << ": " << temp->getSender() << " sent " << temp->getAmount() << " " << d << " to " << user << " at " << temp->getExecTime() << "." << '\n';
+            cout << (temp->get_trans_ID() - 1) << ": " << temp->get_sender() << " sent " << temp->get_amount() << " " << d << " to " << user << " at " << temp->get_exec_time() << "." << '\n';
             start++;
           }
           size_t outsize = tempout.size();
@@ -601,9 +601,9 @@ class Bank {
           while(start < outsize){
             Transaction* temp = &tempout[start];
             string d = "dollar";
-            if(temp->getAmount() > 1 || temp->getAmount() == 0)
+            if(temp->get_amount() > 1 || temp->get_amount() == 0)
               d += "s";
-            cout << (temp->getTransID() - 1) << ": " << user << " sent " << temp->getAmount() << " " << d << " to " << temp->getRecepient() << " at " << temp->getExecTime() << "." << '\n';
+            cout << (temp->get_trans_ID() - 1) << ": " << user << " sent " << temp->get_amount() << " " << d << " to " << temp->get_recepient() << " at " << temp->get_exec_time() << "." << '\n';
             start++;
           }
         }
@@ -624,13 +624,13 @@ class Bank {
           // The variable queryList contains all of the executed transactions.
           for (size_t i = 0; i < queryList.size(); ++i) {
             Transaction* temp = &queryList[i];
-            uint64_t time = temp->getExecTime();
+            uint64_t time = temp->get_exec_time();
             if (start <= time && time < end) {
               string d = "dollar";
-              if (temp->getAmount() > 1 || temp->getAmount() == 0) {
+              if (temp->get_amount() > 1 || temp->get_amount() == 0) {
                   d += 's';
               }
-              cout << (temp->getTransID() - 1) << ": " << temp->getSender() << " sent " << temp->getAmount() << " " << d << " to " << temp->getRecepient() << " at " << temp->getExecTime() << "." << '\n';
+              cout << (temp->get_trans_ID() - 1) << ": " << temp->get_sender() << " sent " << temp->get_amount() << " " << d << " to " << temp->get_recepient() << " at " << temp->get_exec_time() << "." << '\n';
               count++;
             }
           }
