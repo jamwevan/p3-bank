@@ -49,7 +49,7 @@ class Transaction
     uint64_t get_fee() const{
       return fee;
     }
-    void setFee(uint64_t bankFee){
+    void set_fee(uint64_t bankFee){
       fee = bankFee;
     }
   private:
@@ -98,53 +98,53 @@ public:
      This constructor is used when loading user registration data from the account file.
      Remember the account file has lines in this format: REG_TIMESTAMP|USER_ID|PIN|STARTING_BALANCE.
      */
-    User(uint64_t ts, string uID, string PIN, uint64_t balance)
-    : timestamp(ts), userID(uID), myPin(PIN), balance(balance) {}
+    User(uint64_t timestamp, string user_ID, string pin, uint64_t balance)
+    : timestamp(timestamp), user_ID(user_ID), pin(pin), balance(balance) {}
     // Default Constructor
     User(){
         timestamp = 0;
-        userID = "none";
-        myPin = "12345";
+        user_ID = "none";
+        pin = "12345";
         balance = 0;
     }
-    uint64_t getStartTime() const{
+    uint64_t get_start_time() const{
         return timestamp;
     }
-    string getUserID() const{
-        return userID;
+    string get_user_ID() const{
+        return user_ID;
     }
-    string getPin() const{
-        return myPin;
+    string get_pin() const{
+        return pin;
     }
-    uint64_t getBalance() const{
+    uint64_t get_balance() const{
         return balance;
     }
     // Returns the IP address of the active session.
-    string getActiveSess() const{
-        return activeUserSess;
+    string get_active_sess() const{
+        return active_user_sess;
     }
     /*
      Sets activeUserSess which causes the session to be marked as active.
      When a user logs in sucessfully, this method updates their active session.
      By having an IP in activeUserSess, it indicates that the user has an ongoing (active) session
      */
-    void setActiveSess(const string &IP){
-        activeUserSess = IP;
+    void set_active_sess(const string &IP){
+        active_user_sess = IP;
     }
     /*
      Adds new IP to IpAddresses, which is an unordered set.
      This data structure is crucial for verifying transactions quickly since only known IP addresses are valid
      */
-    void addIP(const string &IPAddy){
+    void add_IP(const string &IPAddy){
         IPAddresses.insert(IPAddy);
     }
     // This function is used when the user logs out to ensure only logged-in users with valid IPs can transact.
-    void removeIP(const string &IPAddy){
+    void remove_IP(const string &IPAddy){
         IPAddresses.erase(IPAddy);
-        activeUserSess = "";
+        active_user_sess = "";
     }
     // This function is used to confirm that a transaction request is coming from a recognized IP; helping to prevent fraudulent transactions.
-    bool validIP(const string &IPAddy) const{
+    bool validate_IP(const string &IPAddy) const{
         if (IPAddresses.find(IPAddy) == IPAddresses.end()) {
             return false;
         }
@@ -154,7 +154,7 @@ public:
      Returns true if the user has at least one logged IP address, indicating an active session.
      This ensures users can only place transactions while logged in.
      */
-    bool isLoggedIn(){
+    bool is_logged_in(){
         if(IPAddresses.size() >= 1) {
             return true;
         }
@@ -162,33 +162,33 @@ public:
             return false;
         }
     }
-    void removeMoney(uint64_t amount){
+    void remove_money(uint64_t amount){
         balance = balance - amount;
     }
     
-    void addMoney(uint64_t amount){
+    void add_money(uint64_t amount){
         balance = balance + amount;
     }
     // Adds a transaction to the outgoing vector, which stores a record of transactions the user has sent.
-    void addOutgoing(Transaction trans){
+    void add_outgoing(Transaction trans){
         outgoing.push_back(trans);
     }
     // Adds a transaction to the incoming vector, which stores a record of transactions the user has received.
-    void addIncoming(Transaction trans){
+    void add_incoming(Transaction trans){
         incoming.push_back(trans);
     }
-    vector<Transaction> getOutgoing(){
+    vector<Transaction> get_outgoing(){
         return outgoing;
     }
-    vector<Transaction> getIncoming(){
+    vector<Transaction> get_incoming(){
         return incoming;
     }
 private:
     uint64_t timestamp;
-    string userID;
-    string myPin;
+    string user_ID;
+    string pin;
     uint64_t balance;
-    string activeUserSess;
+    string active_user_sess;
     unordered_set<string> IPAddresses;
     vector<Transaction> outgoing;
     vector<Transaction> incoming;
@@ -211,7 +211,7 @@ class Bank {
            Both unordered_set and unordered_map are implemented as hash tables in C++.
            They both use hash functions to organize and quickly retrieve elements, but unordered map stores key value pairs.
           */
-          myUsers[newUser.getUserID()] = newUser;
+          myUsers[newUser.get_user_ID()] = newUser;
           numUsers++;
         }
         User* getUser(const string &uID){
@@ -220,9 +220,9 @@ class Bank {
         }
         bool login(const string &uID, const string &potPin, string IP){
           User* tempUser = getUser(uID);
-          if(potPin == tempUser->getPin()){
-            tempUser->setActiveSess(IP);
-            tempUser->addIP(IP);
+          if(potPin == tempUser->get_pin()){
+            tempUser->set_active_sess(IP);
+            tempUser->add_IP(IP);
             return true;
           }
           else {
@@ -232,8 +232,8 @@ class Bank {
         }
         bool logout(const string &uID, string IP){
           User* tempUser = getUser(uID);
-          if(tempUser->validIP(IP)){
-            tempUser->removeIP(IP);
+          if(tempUser->validate_IP(IP)){
+            tempUser->remove_IP(IP);
             return true;
           }
           else {
@@ -252,23 +252,23 @@ class Bank {
             // Accessing second element in key-value pair.
             User* user = &it->second;
             // Check if the user is logged in
-            if (!user->isLoggedIn()) {
+            if (!user->is_logged_in()) {
                 if (isVerbose) {
                     cout << "Account " << userID << " is not logged in." << endl;
                 }
                 return;
             }
             // Checking for fraudulent IP.
-            if (!user->validIP(IP)) {
+            if (!user->validate_IP(IP)) {
                 if (isVerbose) {
                     cout << "Fraudulent transaction detected, aborting request." << endl;
                 }
                     return;
             }
             // Determining the timestamp to use: mostRecentTimestamp or registration timestamp.
-            uint64_t displayTimestamp = (mostRecentTimestamp != 0) ? mostRecentTimestamp : user->getStartTime();
+            uint64_t displayTimestamp = (mostRecentTimestamp != 0) ? mostRecentTimestamp : user->get_start_time();
             // Displaying balance if all checks passed.
-            cout << "As of " << displayTimestamp << ", " << userID << " has a balance of $" << user->getBalance() << "." << endl;
+            cout << "As of " << displayTimestamp << ", " << userID << " has a balance of $" << user->get_balance() << "." << endl;
         }
         bool placeTransaction(string &timestamp, string &IP, string &amount, string &exec_date, const string &feePayer, const string &sName, const string &rName){
           // Establishing a limit of 3 days to ensure that the exec_date is not too far in the future.
@@ -314,29 +314,29 @@ class Bank {
           User* sender = getUser(sName);
           User* recepient = getUser(rName);
           // The arrow operator is used to access member variables or member functions of a pointer.
-          string senderName = sender->getUserID();
-          string recepientName = recepient->getUserID();
+          string senderName = sender->get_user_ID();
+          string recepientName = recepient->get_user_ID();
           // Checking if the sender has registered.
-          if(execnum < sender->getStartTime()) {
+          if(execnum < sender->get_start_time()) {
               if(isVerbose) {
                   cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
               }
               return false;
           }
           // Checking if the recepient has registered.
-          if(execnum < recepient->getStartTime()) {
+          if(execnum < recepient->get_start_time()) {
               if(isVerbose) {
                   cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
               }
               return false;
           }
-          if(!sender->isLoggedIn()) {
+          if(!sender->is_logged_in()) {
               if(isVerbose) {
                   cout << "Sender " << senderName << " is not logged in." << "\n";
               }
               return false;
           }
-          if(!sender->validIP(IP)) {
+          if(!sender->validate_IP(IP)) {
               if(isVerbose) {
                   cout << "Fraudulent transaction detected, aborting request." << "\n";
               }
@@ -355,7 +355,7 @@ class Bank {
           // myTransactions a PQ.
           myTransactions.push(trans);
           if(isVerbose) {
-              cout << "Transaction " << (trans.get_trans_ID() - 1) << " placed at " << timenum << ": $" << amount << " from " << sender->getUserID() << " to " << recepient->getUserID() << " at " << execnum << "." << "\n";
+              cout << "Transaction " << (trans.get_trans_ID() - 1) << " placed at " << timenum << ": $" << amount << " from " << sender->get_user_ID() << " to " << recepient->get_user_ID() << " at " << execnum << "." << "\n";
           }
           return true;
         }
@@ -398,7 +398,7 @@ class Bank {
             User* recepient = getUser(temp.get_recepient());
             // If the sender has been registered for more than 5 years, they receive a 25% discount on the fee.
             // 50000000000) := 5 years
-            if ((exectime - sender->getStartTime()) >= 50000000000) {
+            if ((exectime - sender->get_start_time()) >= 50000000000) {
                 fee = (fee * 3) / 4;
             }
             uint64_t senderFee = 0;
@@ -415,7 +415,7 @@ class Bank {
               }
             }
             // The sender must have enough for the transaction amount plus their share of the fee.
-            if (sender->getBalance() < (senderFee + temp.get_amount())) {
+            if (sender->get_balance() < (senderFee + temp.get_amount())) {
                 if (isVerbose) {
                     cout << "Insufficient funds to process transaction " << (temp.get_trans_ID() - 1) << "." << "\n";
                 }
@@ -424,7 +424,7 @@ class Bank {
               valid = false;
             }
             // The recipient must have enough for their share of the fee.
-            else if (recepient->getBalance() < recepFee) {
+            else if (recepient->get_balance() < recepFee) {
                 if (isVerbose) {
                     cout << "Insufficient funds to process transaction " << (temp.get_trans_ID() - 1) << "." << "\n";
                 }
@@ -433,15 +433,15 @@ class Bank {
               valid = false;
             }
             if (valid) {
-              sender->removeMoney(temp.get_amount() + senderFee);
-              recepient->removeMoney(recepFee);
-              recepient->addMoney(temp.get_amount());
+              sender->remove_money(temp.get_amount() + senderFee);
+              recepient->remove_money(recepFee);
+              recepient->add_money(temp.get_amount());
               if (isVerbose) {
-                  cout << "Transaction " << (temp.get_trans_ID() - 1) << " executed at " << temp.get_exec_time() << ": $" << temp.get_amount() << " from " << sender->getUserID() << " to " << recepient->getUserID() << "." << "\n";
+                  cout << "Transaction " << (temp.get_trans_ID() - 1) << " executed at " << temp.get_exec_time() << ": $" << temp.get_amount() << " from " << sender->get_user_ID() << " to " << recepient->get_user_ID() << "." << "\n";
               }
 
               myTransactions.pop();
-              temp.setFee(fee);
+              temp.set_fee(fee);
               /*
                queryList is a vector of Transactions that keeps a history of all executed transactions. Adding temp to queryList ensures that this transaction can be accessed
                later for queries such as listing transactions within a specific time range or calculating bank revenue.
@@ -451,12 +451,12 @@ class Bank {
                The addOutgoing function records the transaction temp in the sender’s outgoing vector (a part of the User class). This allows the bank to retrieve a history
                of all transactions sent by the user, which is useful for generating transaction summaries or account histories.
               */
-              sender->addOutgoing(temp);
+              sender->add_outgoing(temp);
               /*
                The addIncoming function records temp in the recipient’s incoming vector (also part of the User class). This allows the recipient’s account to show a record of
                all funds received, useful for query functions that generate account histories.
               */
-              recepient->addIncoming(temp);
+              recepient->add_incoming(temp);
             }
           }
         }
@@ -568,11 +568,11 @@ class Bank {
           }
           User* thisUser = getUser(user);
           // The member function getIncoming() retrieves a vector of all transactions in which this user is the recipient.
-          vector<Transaction> tempin = thisUser->getIncoming();
+          vector<Transaction> tempin = thisUser->get_incoming();
           // The member function getOutgoing() retrieves a vector of all transactions where this user is the sender.
-          vector<Transaction> tempout = thisUser->getOutgoing();
+          vector<Transaction> tempout = thisUser->get_outgoing();
           cout << "Customer " << user << " account summary:" << '\n';
-          cout << "Balance: $" << thisUser->getBalance() << '\n';
+          cout << "Balance: $" << thisUser->get_balance() << '\n';
           cout << "Total # of transactions: " << (tempin.size() + tempout.size()) << '\n';
           // The expression temp.size() is used multiple times so create a variable for it.
           size_t insize = tempin.size();
