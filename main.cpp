@@ -68,15 +68,15 @@ class Transaction
 class TransactionCompare
 {
   public:
-  bool operator() (Transaction const &trans_l, Transaction const &trans_r) {
+  bool operator() (Transaction const &trans_L, Transaction const &trans_R) {
     // The statement "If L < R then return false" implies that this is a min heap.
-    if (trans_l.get_exec_time() < trans_r.get_exec_time()) {
+    if (trans_L.get_exec_time() < trans_R.get_exec_time()) {
         return false;
     }
     // Second condition to break ties.
-    else if (trans_l.get_exec_time() == trans_r.get_exec_time()) {
+    else if (trans_L.get_exec_time() == trans_R.get_exec_time()) {
         // This is a min heap.
-        if (trans_l.get_trans_ID() < trans_r.get_trans_ID()) {
+        if (trans_L.get_trans_ID() < trans_R.get_trans_ID()) {
             return false;
         }
         else {
@@ -136,16 +136,16 @@ public:
      This data structure is crucial for verifying transactions quickly since only known IP addresses are valid
      */
     void add_IP(const string &IPAddy){
-        IPAddresses.insert(IPAddy);
+        IP_Addresses.insert(IPAddy);
     }
     // This function is used when the user logs out to ensure only logged-in users with valid IPs can transact.
-    void remove_IP(const string &IPAddy){
-        IPAddresses.erase(IPAddy);
+    void remove_IP(const string &IP_Addy){
+        IP_Addresses.erase(IP_Addy);
         active_user_sess = "";
     }
     // This function is used to confirm that a transaction request is coming from a recognized IP; helping to prevent fraudulent transactions.
-    bool validate_IP(const string &IPAddy) const{
-        if (IPAddresses.find(IPAddy) == IPAddresses.end()) {
+    bool validate_IP(const string &IP_Addy) const{
+        if (IP_Addresses.find(IP_Addy) == IP_Addresses.end()) {
             return false;
         }
         return true;
@@ -155,7 +155,7 @@ public:
      This ensures users can only place transactions while logged in.
      */
     bool is_logged_in(){
-        if(IPAddresses.size() >= 1) {
+        if(IP_Addresses.size() >= 1) {
             return true;
         }
         else {
@@ -189,7 +189,7 @@ private:
     string pin;
     uint64_t balance;
     string active_user_sess;
-    unordered_set<string> IPAddresses;
+    unordered_set<string> IP_Addresses;
     vector<Transaction> outgoing;
     vector<Transaction> incoming;
 };
@@ -198,31 +198,31 @@ class Bank {
     public:
         // Bank constructor
         Bank(bool verbose)
-          :isVerbose(verbose){
-            numUsers = 0;
-            numTransactions = 0;
+          :verbose(verbose){
+            num_users = 0;
+            num_transactions = 0;
         }
-        size_t getNumUsers(){
-          return numUsers;
+        size_t get_num_users(){
+          return num_users;
         }
-        void addUser(User newUser){
+        void add_user(User newUser){
           /*
            The variable myUsers is an unordered map where the key is user id and the object is user.
            Both unordered_set and unordered_map are implemented as hash tables in C++.
            They both use hash functions to organize and quickly retrieve elements, but unordered map stores key value pairs.
           */
-          myUsers[newUser.get_user_ID()] = newUser;
-          numUsers++;
+          Users[newUser.get_user_ID()] = newUser;
+          num_users++;
         }
-        User* getUser(const string &uID){
+        User* get_user(const string &uID){
           // Returning an address here.
-          return &myUsers[uID];
+          return &Users[uID];
         }
-        bool login(const string &uID, const string &potPin, string IP){
-          User* tempUser = getUser(uID);
-          if(potPin == tempUser->get_pin()){
-            tempUser->set_active_sess(IP);
-            tempUser->add_IP(IP);
+        bool login(const string &uID, const string &pin, string IP){
+          User* temp_user = get_user(uID);
+          if(pin == temp_user->get_pin()){
+            temp_user->set_active_sess(IP);
+            temp_user->add_IP(IP);
             return true;
           }
           else {
@@ -231,20 +231,20 @@ class Bank {
           }
         }
         bool logout(const string &uID, string IP){
-          User* tempUser = getUser(uID);
-          if(tempUser->validate_IP(IP)){
-            tempUser->remove_IP(IP);
+          User* temp_user = get_user(uID);
+          if(temp_user->validate_IP(IP)){
+            temp_user->remove_IP(IP);
             return true;
           }
           else {
               return false;
           }
         }
-        void checkBalance(const string &userID, const string &IP) {
+        void check_balance(const string &userID, const string &IP) {
             // Checking if the user exists.
-            auto it = myUsers.find(userID);
-            if (it == myUsers.end()) {
-                if (isVerbose) {
+            auto it = Users.find(userID);
+            if (it == Users.end()) {
+                if (verbose) {
                     cout << "Account " << userID << " does not exist." << endl;
                 }
                     return;
@@ -253,91 +253,91 @@ class Bank {
             User* user = &it->second;
             // Check if the user is logged in
             if (!user->is_logged_in()) {
-                if (isVerbose) {
+                if (verbose) {
                     cout << "Account " << userID << " is not logged in." << endl;
                 }
                 return;
             }
             // Checking for fraudulent IP.
             if (!user->validate_IP(IP)) {
-                if (isVerbose) {
+                if (verbose) {
                     cout << "Fraudulent transaction detected, aborting request." << endl;
                 }
                     return;
             }
             // Determining the timestamp to use: mostRecentTimestamp or registration timestamp.
-            uint64_t displayTimestamp = (mostRecentTimestamp != 0) ? mostRecentTimestamp : user->get_start_time();
+            uint64_t displayTimestamp = (most_recent_timestamp != 0) ? most_recent_timestamp : user->get_start_time();
             // Displaying balance if all checks passed.
             cout << "As of " << displayTimestamp << ", " << userID << " has a balance of $" << user->get_balance() << "." << endl;
         }
-        bool placeTransaction(string &timestamp, string &IP, string &amount, string &exec_date, const string &feePayer, const string &sName, const string &rName){
+        bool place_transaction(string &timestamp, string &IP, string &amount, string &exec_date, const string &feePayer, const string &sName, const string &rName){
           // Establishing a limit of 3 days to ensure that the exec_date is not too far in the future.
-          uint64_t threedays = 3000000;
+          uint64_t three_days = 3000000;
           // Converts exec_date and timestamp into c style strings that are stored in a char pointer because of array decay.
           const char* exec = exec_date.c_str();
           const char* time = timestamp.c_str();
           // Converting the c style strings into unit64_t integers.
-          uint64_t execnum = strtoull(exec, NULL, 10);
-          uint64_t timenum = strtoull(time, NULL, 10);
+          uint64_t exec_num = strtoull(exec, NULL, 10);
+          uint64_t time_num = strtoull(time, NULL, 10);
           // Setting mostRecentTimestamp to time of most recent place command.
-          mostRecentTimestamp = timenum;
-          uint64_t difference = execnum - timenum;
+          most_recent_timestamp = time_num;
+          uint64_t difference = exec_num - time_num;
           if (sName == rName) {
-              if (isVerbose) {
+              if (verbose) {
                   cout << "Self transactions are not allowed." << "\n";
               }
               else {
                   return false;
               }
           }
-          if(difference > threedays) {
-              if(isVerbose) {
+          if(difference > three_days) {
+              if(verbose) {
                   cout << "Select a time up to three days in the future." << "\n";
               }
               return false;
           }
           // Ensuring that the sender exists.
-          if(myUsers.find(sName) == myUsers.end()) {
-              if(isVerbose) {
+          if(Users.find(sName) == Users.end()) {
+              if(verbose) {
                   cout << "Sender " << sName << " does not exist." << "\n";
               }
               return false;
           }
           // Ensuring that the recipient exists.
-          if(myUsers.find(rName) == myUsers.end()) {
-              if(isVerbose) {
+          if(Users.find(rName) == Users.end()) {
+              if(verbose) {
                   cout << "Recipient " << rName << " does not exist." << "\n";
               }
               return false;
           }
           // getUser returns a user object address
-          User* sender = getUser(sName);
-          User* recepient = getUser(rName);
+          User* sender = get_user(sName);
+          User* recepient = get_user(rName);
           // The arrow operator is used to access member variables or member functions of a pointer.
-          string senderName = sender->get_user_ID();
-          string recepientName = recepient->get_user_ID();
+          string s_name = sender->get_user_ID();
+          string r_name = recepient->get_user_ID();
           // Checking if the sender has registered.
-          if(execnum < sender->get_start_time()) {
-              if(isVerbose) {
+          if(exec_num < sender->get_start_time()) {
+              if(verbose) {
                   cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
               }
               return false;
           }
           // Checking if the recepient has registered.
-          if(execnum < recepient->get_start_time()) {
-              if(isVerbose) {
+          if(exec_num < recepient->get_start_time()) {
+              if(verbose) {
                   cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
               }
               return false;
           }
           if(!sender->is_logged_in()) {
-              if(isVerbose) {
-                  cout << "Sender " << senderName << " is not logged in." << "\n";
+              if(verbose) {
+                  cout << "Sender " << s_name << " is not logged in." << "\n";
               }
               return false;
           }
           if(!sender->validate_IP(IP)) {
-              if(isVerbose) {
+              if(verbose) {
                   cout << "Fraudulent transaction detected, aborting request." << "\n";
               }
               return false;
@@ -347,20 +347,20 @@ class Bank {
            Because we moved foward in time, we have to check if any pending transactions are now due to execute.
            Timestamp is read in from spec-commands because place orders come with a timestamp.
           */
-          executeTransaction(timestamp);
+          execute_transaction(timestamp);
           const char* amt = amount.c_str();
-          uint64_t amtnum = strtoull(amt, NULL, 10);
-          numTransactions++;
-          Transaction trans = Transaction(timenum, senderName, recepientName, amtnum, execnum, exec_date, feePayer, numTransactions);
+          uint64_t amt_num = strtoull(amt, NULL, 10);
+          num_transactions++;
+          Transaction trans = Transaction(time_num, s_name, r_name, amt_num, exec_num, exec_date, feePayer, num_transactions);
           // myTransactions a PQ.
-          myTransactions.push(trans);
-          if(isVerbose) {
-              cout << "Transaction " << (trans.get_trans_ID() - 1) << " placed at " << timenum << ": $" << amount << " from " << sender->get_user_ID() << " to " << recepient->get_user_ID() << " at " << execnum << "." << "\n";
+          Transactions.push(trans);
+          if(verbose) {
+              cout << "Transaction " << (trans.get_trans_ID() - 1) << " placed at " << time_num << ": $" << amount << " from " << sender->get_user_ID() << " to " << recepient->get_user_ID() << " at " << exec_num << "." << "\n";
           }
           return true;
         }
-        bool hasTransactions(){
-            if(myTransactions.size() > 0) {
+        bool has_transactions(){
+            if(Transactions.size() > 0) {
                 return true;
             }
             else {
@@ -368,19 +368,19 @@ class Bank {
             }
         }
         // The function executeTransaction processes transactions in the priority queue up to the specified timestamp.
-        void executeTransaction(string &timestamp){
-          while(!myTransactions.empty()){
+        void execute_transaction(string &timestamp){
+          while(!Transactions.empty()){
             const char* ctime = timestamp.c_str();
-            uint64_t currentTime = strtoull(ctime, NULL, 10);
+            uint64_t current_time = strtoull(ctime, NULL, 10);
             // The top() method retrieves the transaction with the highest priority (earliest execution time) from the priority queue.
-            Transaction temp = myTransactions.top();
+            Transaction temp = Transactions.top();
             /*
              The bool valid variable is used to track whether a transaction is eligible to be executed based on a series of checks (such as sufficient funds for both the
              sender and recipient). If any of these checks fail, valid is set to false, preventing the transaction from being executed.
             */
             bool valid = true;
               //  If the transaction’s execution time is greater than currentTime, it’s not yet ready to be processed, so the function returns early and does nothing.
-            if (temp.get_exec_time() > currentTime) {
+            if (temp.get_exec_time() > current_time) {
                 return;
             }
             //o := sender, s := shared equally
@@ -393,60 +393,60 @@ class Bank {
                 fee = 450;
             }
             // The variable temp is a Transaction object.
-            uint64_t exectime = temp.get_exec_time();
-            User* sender = getUser(temp.get_sender());
-            User* recepient = getUser(temp.get_recepient());
+            uint64_t exec_time = temp.get_exec_time();
+            User* sender = get_user(temp.get_sender());
+            User* recepient = get_user(temp.get_recepient());
             // If the sender has been registered for more than 5 years, they receive a 25% discount on the fee.
             // 50000000000) := 5 years
-            if ((exectime - sender->get_start_time()) >= 50000000000) {
+            if ((exec_time - sender->get_start_time()) >= 50000000000) {
                 fee = (fee * 3) / 4;
             }
-            uint64_t senderFee = 0;
-            uint64_t recepFee = 0;
+            uint64_t s_fee = 0;
+            uint64_t r_fee = 0;
             if (temp.get_fee_payer() == "o") {
-              senderFee = fee;
-              recepFee = 0;
+              s_fee = fee;
+              r_fee = 0;
             }
             else if (temp.get_fee_payer() == "s") {//shared fee
-              recepFee = fee / 2;
-              senderFee = fee / 2;
-              if (fee%2 != 0) {//odd means sender pays the extra cent
-                senderFee++;
+              r_fee = fee / 2;
+              s_fee = fee / 2;
+              if (fee % 2 != 0) {//odd means sender pays the extra cent
+                s_fee++;
               }
             }
             // The sender must have enough for the transaction amount plus their share of the fee.
-            if (sender->get_balance() < (senderFee + temp.get_amount())) {
-                if (isVerbose) {
+            if (sender->get_balance() < (s_fee + temp.get_amount())) {
+                if (verbose) {
                     cout << "Insufficient funds to process transaction " << (temp.get_trans_ID() - 1) << "." << "\n";
                 }
                 // If either party lacks sufficient funds, the transaction is marked not valid and removed from the queue without executing.
-              myTransactions.pop();
+              Transactions.pop();
               valid = false;
             }
             // The recipient must have enough for their share of the fee.
-            else if (recepient->get_balance() < recepFee) {
-                if (isVerbose) {
+            else if (recepient->get_balance() < r_fee) {
+                if (verbose) {
                     cout << "Insufficient funds to process transaction " << (temp.get_trans_ID() - 1) << "." << "\n";
                 }
                 // If either party lacks sufficient funds, the transaction is marked not valid and removed from the queue without executing.
-              myTransactions.pop();
+              Transactions.pop();
               valid = false;
             }
             if (valid) {
-              sender->remove_money(temp.get_amount() + senderFee);
-              recepient->remove_money(recepFee);
+              sender->remove_money(temp.get_amount() + s_fee);
+              recepient->remove_money(r_fee);
               recepient->add_money(temp.get_amount());
-              if (isVerbose) {
+              if (verbose) {
                   cout << "Transaction " << (temp.get_trans_ID() - 1) << " executed at " << temp.get_exec_time() << ": $" << temp.get_amount() << " from " << sender->get_user_ID() << " to " << recepient->get_user_ID() << "." << "\n";
               }
 
-              myTransactions.pop();
+              Transactions.pop();
               temp.set_fee(fee);
               /*
                queryList is a vector of Transactions that keeps a history of all executed transactions. Adding temp to queryList ensures that this transaction can be accessed
                later for queries such as listing transactions within a specific time range or calculating bank revenue.
               */
-              queryList.push_back(temp);
+              Queries.push_back(temp);
               /*
                The addOutgoing function records the transaction temp in the sender’s outgoing vector (a part of the User class). This allows the bank to retrieve a history
                of all transactions sent by the user, which is useful for generating transaction summaries or account histories.
@@ -465,19 +465,19 @@ class Bank {
          The function takes two string references, startTime and endTime, which represent the time range for the transactions to be listed.
          Each timestamp is in the format yy:mm:dd:hh:mm:ss
         */
-        void ListTransactions(string &startTime, string &endTime){
+        void list_transactions(string &startTime, string &endTime){
           // Ignoring all colons.
-          string temptime1 = startTime.substr(0,2) + startTime.substr(3,2) + startTime.substr(6,2) + startTime.substr(9,2) + startTime.substr(12,2) + startTime.substr(15,2);
-          const char* ctime1 = temptime1.c_str();
-          uint64_t start = strtoull(ctime1, NULL, 10);
-          string temptime2 = endTime.substr(0,2) + endTime.substr(3,2) + endTime.substr(6,2) + endTime.substr(9,2) + endTime.substr(12,2) + endTime.substr(15,2);
-          const char* ctime2 = temptime2.c_str();
-          uint64_t end = strtoull(ctime2, NULL, 10);
+          string temp_time_1 = startTime.substr(0,2) + startTime.substr(3,2) + startTime.substr(6,2) + startTime.substr(9,2) + startTime.substr(12,2) + startTime.substr(15,2);
+          const char* ctime_1 = temp_time_1.c_str();
+          uint64_t start = strtoull(ctime_1, NULL, 10);
+          string temp_time_2 = endTime.substr(0,2) + endTime.substr(3,2) + endTime.substr(6,2) + endTime.substr(9,2) + endTime.substr(12,2) + endTime.substr(15,2);
+          const char* ctime_2 = temp_time_2.c_str();
+          uint64_t end = strtoull(ctime_2, NULL, 10);
           // The variable count keeps track of how many transactions fall within the specified range.
           int count = 0;
           // The loop iterates over each transaction in queryList, which is a vector of Transactions that stores all executed transactions.
-          for(size_t i = 0; i < queryList.size(); ++i){
-            Transaction* temp = &queryList[i];
+          for(size_t i = 0; i < Queries.size(); ++i){
+            Transaction* temp = &Queries[i];
             uint64_t time = temp->get_exec_time();
             if (start <= time && time < end) {
               string d = "dollar";
@@ -504,10 +504,10 @@ class Bank {
          The calcRevenue function in the Bank class calculates the bank’s revenue from transaction fees over a specified time range
          It iterates through the bank’s list of executed transactions (queryList) and sums up the fees for all transactions that occurred within the specified time window
         */
-        uint64_t calcRevenue(uint64_t start, uint64_t end, bool isExec){
+        uint64_t calc_revenue(uint64_t start, uint64_t end, bool isExec){
           uint64_t revenue = 0;
-          for(size_t i = 0; i < queryList.size(); ++i){
-            Transaction* temp = &queryList[i];
+          for(size_t i = 0; i < Queries.size(); ++i){
+            Transaction* temp = &Queries[i];
             uint64_t time = 0;
             /*
              IsExex is a boolean indicating whether to use the transaction’s execution time or placement time for comparison.
@@ -524,15 +524,15 @@ class Bank {
           }
           return revenue;
         }
-        void BankRevenue(string &startTime, string &endTime){
-          string temptime1 = startTime.substr(0,2) + startTime.substr(3,2) + startTime.substr(6,2) + startTime.substr(9,2) + startTime.substr(12,2) + startTime.substr(15,2);
-          const char* ctime1 = temptime1.c_str();
-          uint64_t start = strtoull(ctime1, NULL, 10);
-          string temptime2 = endTime.substr(0,2) + endTime.substr(3,2) + endTime.substr(6,2) + endTime.substr(9,2) + endTime.substr(12,2) + endTime.substr(15,2);
-          const char* ctime2 = temptime2.c_str();
-          uint64_t end = strtoull(ctime2, NULL, 10);
+        void bank_revenue(string &startTime, string &endTime){
+          string temp_time_1 = startTime.substr(0,2) + startTime.substr(3,2) + startTime.substr(6,2) + startTime.substr(9,2) + startTime.substr(12,2) + startTime.substr(15,2);
+          const char* ctime_1 = temp_time_1.c_str();
+          uint64_t start = strtoull(ctime_1, NULL, 10);
+          string temp_time_2 = endTime.substr(0,2) + endTime.substr(3,2) + endTime.substr(6,2) + endTime.substr(9,2) + endTime.substr(12,2) + endTime.substr(15,2);
+          const char* ctime_2 = temp_time_2.c_str();
+          uint64_t end = strtoull(ctime_2, NULL, 10);
           // Here isExec is set to true
-          uint64_t revenue = calcRevenue(start, end, true);
+          uint64_t revenue = calc_revenue(start, end, true);
           uint64_t time = end - start;
           string output = "";
           vector<string> times = {"second", "minute", "hour", "day", "month", "year"};
@@ -560,13 +560,13 @@ class Bank {
          The CustomerHistory function in the Bank class displays a summary of a specific user’s account history, including their balance, total number of transactions, and
          recent incoming and outgoing transactions
         */
-        void CustomerHistory(string &user){
+        void customer_history(string &user){
           // If user does not exist then find returns an iterator equal to myUsers.end(), which is a special iterator representing “one past the end” of the container.
-          if (myUsers.find(user) == myUsers.end()) {
+          if (Users.find(user) == Users.end()) {
             cout << "User " << user << " does not exist." << '\n';
             return;
           }
-          User* thisUser = getUser(user);
+          User* thisUser = get_user(user);
           // The member function getIncoming() retrieves a vector of all transactions in which this user is the recipient.
           vector<Transaction> tempin = thisUser->get_incoming();
           // The member function getOutgoing() retrieves a vector of all transactions where this user is the sender.
@@ -608,7 +608,7 @@ class Bank {
           }
         }
         // The SummarizeDay function in the Bank class provides a summary of all transactions that occurred within a specific day.
-        void SummarizeDay(string timestamp){
+        void summarize_day(string timestamp){
           timestamp = timestamp.substr(0,2) + timestamp.substr(3,2) + timestamp.substr(6,2) + timestamp.substr(9,2) + timestamp.substr(12,2) + timestamp.substr(15,2);
           const char* ctime = timestamp.c_str();
           uint64_t time = strtoull(ctime, NULL, 10);
@@ -622,8 +622,8 @@ class Bank {
           cout << "Summary of [" << start << ", " << end << "):" << '\n';
           int count = 0;
           // The variable queryList contains all of the executed transactions.
-          for (size_t i = 0; i < queryList.size(); ++i) {
-            Transaction* temp = &queryList[i];
+          for (size_t i = 0; i < Queries.size(); ++i) {
+            Transaction* temp = &Queries[i];
             uint64_t time = temp->get_exec_time();
             if (start <= time && time < end) {
               string d = "dollar";
@@ -641,22 +641,22 @@ class Bank {
           else {
             t += "There was a total of " + to_string(count) + " transaction, ";
           }
-          uint64_t revenue = calcRevenue(start, end, true);
+          uint64_t revenue = calc_revenue(start, end, true);
           t += "281Bank has collected " + to_string(revenue) + " dollars in fees.";
           cout << t << '\n';
         }
     private:
         // The data structure unordered_map stores a key-value pair where the key is the user id and the object is the user.
-        unordered_map<string, User> myUsers;// key is user id, object is user
-        size_t numUsers;
-        bool isVerbose;
-        size_t numTransactions;
-        priority_queue<Transaction, vector<Transaction>, TransactionCompare> myTransactions;
-        vector<Transaction> queryList;
-        uint64_t mostRecentTimestamp;
+        unordered_map<string, User> Users;// key is user id, object is user
+        size_t num_users;
+        bool verbose;
+        size_t num_transactions;
+        priority_queue<Transaction, vector<Transaction>, TransactionCompare> Transactions;
+        vector<Transaction> Queries;
+        uint64_t most_recent_timestamp;
 };
 
-void getMode(int argc, char * argv[], bool &isVerbose, string &filename) {
+void get_mode(int argc, char * argv[], bool &isVerbose, string &filename) {
   //  This line tells getopt_long not to automatically print error messages for unrecognized options, allowing the program to handle error messages manually.
   opterr = false;
   // The variable choice is used to store the result of each parsed option from getopt_long.
@@ -715,40 +715,40 @@ void getMode(int argc, char * argv[], bool &isVerbose, string &filename) {
 int main(int argc, char* argv[]) {
     // IO optimization being utilized here.
     ios_base::sync_with_stdio(false);
-    bool isVerbose = false;
+    bool verbose = false;
     string fileName;
-    getMode(argc, argv, isVerbose, fileName);
+    get_mode(argc, argv, verbose, fileName);
     // the filename was passed by reference
     if (fileName.empty()) {
         cerr << "filename has not been specified" << endl;
         exit(1);
     }
-    Bank myBank = Bank(isVerbose);
+    Bank myBank = Bank(verbose);
     // Here we are using the ifstream constructor and specifying the file we are using and the fact we are reading
     ifstream regfile(fileName, ifstream::in);
     if(regfile.good()){
         while(regfile){
-            string temptime;
+            string temp_time;
             uint64_t time;
             string name;
             string pin;
-            string tempnum;
+            string temp_num;
             uint64_t balance;
             // getline(regfile, temptime, '|'); reads a portion of the line up to the first | character and stores it in temptime.
-            getline(regfile, temptime, '|');//time
-            if (temptime.empty()) {
+            getline(regfile, temp_time, '|');//time
+            if (temp_time.empty()) {
                 break;
             }
-            temptime = temptime.substr(0,2) + temptime.substr(3,2) + temptime.substr(6,2) + temptime.substr(9,2) + temptime.substr(12,2) + temptime.substr(15,2);
-            const char* ctime = temptime.c_str();
+            temp_time = temp_time.substr(0,2) + temp_time.substr(3,2) + temp_time.substr(6,2) + temp_time.substr(9,2) + temp_time.substr(12,2) + temp_time.substr(15,2);
+            const char* ctime = temp_time.c_str();
             time = strtoull(ctime, NULL, 10);
             getline(regfile, name, '|');
             getline(regfile, pin, '|');
-            getline(regfile, tempnum);
-            const char* tempstring = tempnum.c_str();
+            getline(regfile, temp_num);
+            const char* tempstring = temp_num.c_str();
             balance = strtoull(tempstring, NULL, 10);
             User tempUser = User(time, name, pin, balance);
-            myBank.addUser(tempUser);
+            myBank.add_user(tempUser);
         }
     }
     else {
@@ -760,9 +760,9 @@ int main(int argc, char* argv[]) {
         cerr << "Error: Reading from cin has failed" << endl;
     exit(1);
     }
-    uint64_t prevPlaceTime = 0;
+    uint64_t prev_place_time = 0;
     int placed = 0;
-    string currTime;
+    string curr_time;
     /*
      We are using two different files. One is registration file and the other is a command file.
      When running the program from the command line, you can redirect cin to read from a file by using < operator.
@@ -787,12 +787,12 @@ int main(int argc, char* argv[]) {
                     cin >> IP;
                     bool success = myBank.login(uID, pin, IP);
                     if (success) {
-                        if (isVerbose) {
+                        if (verbose) {
                             cout << "User " << uID << " logged in." << "\n";
                         }
                     }
                     else {
-                        if (isVerbose) {
+                        if (verbose) {
                             cout << "Login failed for " << uID << "." << "\n";
                         }
                     }
@@ -805,12 +805,12 @@ int main(int argc, char* argv[]) {
                     cin >> IP;
                     bool success = myBank.logout(uID, IP);
                     if (success) {
-                        if (isVerbose) {
+                        if (verbose) {
                             cout << "User " << uID << " logged out." << "\n";
                         }
                     }
                     else {
-                        if (isVerbose) {
+                        if (verbose) {
                             cout << "Logout failed for " << uID << "." << "\n";
                         }
                     }
@@ -820,7 +820,7 @@ int main(int argc, char* argv[]) {
                 case 'b': {
                     string userID, IP;
                     cin >> userID >> IP;
-                    myBank.checkBalance(userID, IP);
+                    myBank.check_balance(userID, IP);
                     break;
                 }
                 // This is the case for the place command.
@@ -831,21 +831,21 @@ int main(int argc, char* argv[]) {
                     string recepient;
                     string amount;
                     string exec_date;
-                    string feePayer;
+                    string fee_payer;
                     cin >> timestamp;
                     cin >> IP;
                     cin >> sender;
                     cin >> recepient;
                     cin >> amount;
                     cin >> exec_date;
-                    cin >> feePayer;
+                    cin >> fee_payer;
                     timestamp = timestamp.substr(0,2) + timestamp.substr(3,2) + timestamp.substr(6,2) + timestamp.substr(9,2) + timestamp.substr(12,2) + timestamp.substr(15,2);
                     exec_date = exec_date.substr(0,2) + exec_date.substr(3,2) + exec_date.substr(6,2) + exec_date.substr(9,2) + exec_date.substr(12,2) + exec_date.substr(15,2);
                     const char* exec = exec_date.c_str();
                     const char* time = timestamp.c_str();
                     uint64_t execnum = strtoull(exec, NULL, 10);
                     uint64_t timenum = strtoull(time, NULL, 10);
-                    if (prevPlaceTime > timenum && placed != 0) {
+                    if (prev_place_time > timenum && placed != 0) {
                         cerr << "Invalid decreasing timestamp in 'place' command." << endl;
                         exit(1);
                     }
@@ -853,10 +853,10 @@ int main(int argc, char* argv[]) {
                         cerr << "You cannot have an execution date before the current timestamp." << endl;
                         exit(1);
                     }
-                    bool validT = myBank.placeTransaction(timestamp, IP, amount, exec_date, feePayer, sender, recepient);
-                    if (validT) {
-                        currTime = timestamp;
-                        prevPlaceTime = timenum;
+                    bool valid_T = myBank.place_transaction(timestamp, IP, amount, exec_date, fee_payer, sender, recepient);
+                    if (valid_T) {
+                        curr_time = timestamp;
+                        prev_place_time = timenum;
                         placed++;
                     }
                     break;
@@ -865,9 +865,9 @@ int main(int argc, char* argv[]) {
             cin >> temp;
         }
         // Setting a high time lets the function executeTransaction to process all remaining pending transactions.
-        while (myBank.hasTransactions()) {
-            string maxTime = "999999999999";
-            myBank.executeTransaction(maxTime);
+        while (myBank.has_transactions()) {
+            string max_time = "999999999999";
+            myBank.execute_transaction(max_time);
         }
         // Extracting $$$ from the command file.
         cin >> temp;
@@ -875,31 +875,31 @@ int main(int argc, char* argv[]) {
         while(!cin.fail()){
             switch(temp[0]){
                 case 'l':{
-                    string starttime;
-                    string endtime;
-                    cin >> starttime;
-                    cin >> endtime;
-                    myBank.ListTransactions(starttime, endtime);
+                    string start_time;
+                    string end_time;
+                    cin >> start_time;
+                    cin >> end_time;
+                    myBank.list_transactions(start_time, end_time);
                     break;
                 }
                 case 'r':{
-                    string starttime;
-                    string endtime;
-                    cin >> starttime;
-                    cin >> endtime;
-                    myBank.BankRevenue(starttime, endtime);
+                    string start_time;
+                    string end_time;
+                    cin >> start_time;
+                    cin >> end_time;
+                    myBank.bank_revenue(start_time, end_time);
                     break;
                 }
                 case 'h':{
                     string user;
                     cin >> user;
-                    myBank.CustomerHistory(user);
+                    myBank.customer_history(user);
                     break;
                 }
                 case 's':{
                     string day;
                     cin >> day;
-                    myBank.SummarizeDay(day);
+                    myBank.summarize_day(day);
                     break;
                 }
             }
