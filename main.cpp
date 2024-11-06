@@ -1,4 +1,4 @@
-// Project Identifier: 292F24D17A4455C1B5133EDD8C7CEAA0C9570A98
+// Identifier: 292F24D17A4455C1B5133EDD8C7CEAA0C9570A98
 
 // These are the libraries that are used by the code.
 #include <algorithm>
@@ -201,6 +201,7 @@ class Bank {
           :verbose(verbose){
             num_users = 0;
             num_transactions = 0;
+            most_recent_timestamp = 0;
         }
         size_t get_num_users(){
           return num_users;
@@ -232,7 +233,7 @@ class Bank {
         }
         bool logout(const string &uID, string IP){
           User* temp_user = get_user(uID);
-          if(temp_user->validate_IP(IP)){
+          if (temp_user->validate_IP(IP)) {
             temp_user->remove_IP(IP);
             return true;
           }
@@ -271,6 +272,34 @@ class Bank {
             cout << "As of " << displayTimestamp << ", " << userID << " has a balance of $" << user->get_balance() << "." << endl;
         }
         bool place_transaction(string &timestamp, string &IP, string &amount, string &exec_date, const string &feePayer, const string &sName, const string &rName){
+          /*
+          // Alternate version
+          int yy1 = stoi(timestamp.substr(0, 2));
+          int mm1 = stoi(timestamp.substr(2, 2));
+          int dd1 = stoi(timestamp.substr(4, 2));
+          int hh1 = stoi(timestamp.substr(6, 2));
+          int min1 = stoi(timestamp.substr(8, 2));
+          int sec1 = stoi(timestamp.substr(10, 2));
+          int yy2 = stoi(exec_date.substr(0, 2));
+          int mm2 = stoi(exec_date.substr(2, 2));
+          int dd2 = stoi(exec_date.substr(4, 2));
+          int hh2 = stoi(exec_date.substr(6, 2));
+          int min2 = stoi(exec_date.substr(8, 2));
+          int sec2 = stoi(exec_date.substr(10, 2));
+          // Convert each timestamp to total seconds
+          int total_seconds1 = (((yy1 * 12 + mm1) * 30 + dd1) * 86400) + hh1 * 3600 + min1 * 60 + sec1;
+          int total_seconds2 = (((yy2 * 12 + mm2) * 30 + dd2) * 86400) + hh2 * 3600 + min2 * 60 + sec2;
+          // Check if the execution date is within three days (259,200 seconds)
+          // Calculate the difference
+          int difference = total_seconds2 - total_seconds1;
+          if (difference < 0 || difference > 259200) {
+              if (verbose) {
+                  cout << "Select a time up to three days in the future." << "\n";
+              }
+              return false;
+          }
+          */
+
           // Establishing a limit of 3 days to ensure that the exec_date is not too far in the future.
           uint64_t three_days = 3000000;
           // Converts exec_date and timestamp into c style strings that are stored in a char pointer because of array decay.
@@ -282,20 +311,24 @@ class Bank {
           // Setting mostRecentTimestamp to time of most recent place command.
           most_recent_timestamp = time_num;
           uint64_t difference = exec_num - time_num;
+          
+            
           if (sName == rName) {
               if (verbose) {
                   cout << "Self transactions are not allowed." << "\n";
               }
-              else {
-                  return false;
-              }
+              return false;
           }
+            
+          
           if(difference > three_days) {
               if(verbose) {
                   cout << "Select a time up to three days in the future." << "\n";
               }
               return false;
           }
+          
+            
           // Ensuring that the sender exists.
           if(Users.find(sName) == Users.end()) {
               if(verbose) {
@@ -317,6 +350,7 @@ class Bank {
           string s_name = sender->get_user_ID();
           string r_name = recepient->get_user_ID();
           // Checking if the sender has registered.
+          // TODO: comparison between int and timestamp not working well
           if(exec_num < sender->get_start_time()) {
               if(verbose) {
                   cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
@@ -324,6 +358,7 @@ class Bank {
               return false;
           }
           // Checking if the recepient has registered.
+            // TODO: Default initialized to 0. Check for that instead?]
           if(exec_num < recepient->get_start_time()) {
               if(verbose) {
                   cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
@@ -473,6 +508,11 @@ class Bank {
           string temp_time_2 = endTime.substr(0,2) + endTime.substr(3,2) + endTime.substr(6,2) + endTime.substr(9,2) + endTime.substr(12,2) + endTime.substr(15,2);
           const char* ctime_2 = temp_time_2.c_str();
           uint64_t end = strtoull(ctime_2, NULL, 10);
+          // Checking if start and end times are the same
+          if (start == end) {
+              cout << "List Transactions requires a non-empty time interval." << endl;
+              return;
+          }
           // The variable count keeps track of how many transactions fall within the specified range.
           int count = 0;
           // The loop iterates over each transaction in queryList, which is a vector of Transactions that stores all executed transactions.
@@ -531,6 +571,11 @@ class Bank {
           string temp_time_2 = endTime.substr(0,2) + endTime.substr(3,2) + endTime.substr(6,2) + endTime.substr(9,2) + endTime.substr(12,2) + endTime.substr(15,2);
           const char* ctime_2 = temp_time_2.c_str();
           uint64_t end = strtoull(ctime_2, NULL, 10);
+          // Checking if start and end times are the same
+          if (start == end) {
+              cout << "Bank Revenue requires a non-empty time interval." << endl;
+              return;
+          }
           // Here isExec is set to true
           uint64_t revenue = calc_revenue(start, end, true);
           uint64_t time = end - start;
