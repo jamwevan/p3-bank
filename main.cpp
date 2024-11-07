@@ -97,18 +97,10 @@ public:
      The variable ts is time stamp of when the user registered.
      This constructor is used when loading user registration data from the account file.
      Remember the account file has lines in this format: REG_TIMESTAMP|USER_ID|PIN|STARTING_BALANCE.
-     */
+    */
     User(uint64_t timestamp, string user_ID, string pin, uint64_t balance)
     : timestamp(timestamp), user_ID(user_ID), pin(pin), balance(balance) {}
     // Default Constructor
-    /*
-    User(){
-        timestamp = 0;
-        user_ID = "none";
-        pin = "12345";
-        balance = 0;
-    }
-    */
     User()
     : timestamp(0), user_ID("none"), pin("12345"), balance(0) {}
     
@@ -277,34 +269,6 @@ class Bank {
             cout << "As of " << displayTimestamp << ", " << userID << " has a balance of $" << user->get_balance() << "." << endl;
         }
         bool place_transaction(string &timestamp, string &IP, string &amount, string &exec_date, const string &feePayer, const string &sName, const string &rName){
-          /*
-          // Alternate version
-          int yy1 = stoi(timestamp.substr(0, 2));
-          int mm1 = stoi(timestamp.substr(2, 2));
-          int dd1 = stoi(timestamp.substr(4, 2));
-          int hh1 = stoi(timestamp.substr(6, 2));
-          int min1 = stoi(timestamp.substr(8, 2));
-          int sec1 = stoi(timestamp.substr(10, 2));
-          int yy2 = stoi(exec_date.substr(0, 2));
-          int mm2 = stoi(exec_date.substr(2, 2));
-          int dd2 = stoi(exec_date.substr(4, 2));
-          int hh2 = stoi(exec_date.substr(6, 2));
-          int min2 = stoi(exec_date.substr(8, 2));
-          int sec2 = stoi(exec_date.substr(10, 2));
-          // Convert each timestamp to total seconds
-          int total_seconds1 = (((yy1 * 12 + mm1) * 30 + dd1) * 86400) + hh1 * 3600 + min1 * 60 + sec1;
-          int total_seconds2 = (((yy2 * 12 + mm2) * 30 + dd2) * 86400) + hh2 * 3600 + min2 * 60 + sec2;
-          // Check if the execution date is within three days (259,200 seconds)
-          // Calculate the difference
-          int difference = total_seconds2 - total_seconds1;
-          if (difference < 0 || difference > 259200) {
-              if (verbose) {
-                  cout << "Select a time up to three days in the future." << "\n";
-              }
-              return false;
-          }
-          */
-
           // Establishing a limit of 3 days to ensure that the exec_date is not too far in the future.
           uint64_t three_days = 3000000;
           // Converts exec_date and timestamp into c style strings that are stored in a char pointer because of array decay.
@@ -355,7 +319,6 @@ class Bank {
           string s_name = sender->get_user_ID();
           string r_name = recepient->get_user_ID();
           // Checking if the sender has registered.
-          // TODO: comparison between int and timestamp not working well
           if(exec_num < sender->get_start_time()) {
               if(verbose) {
                   cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
@@ -363,7 +326,6 @@ class Bank {
               return false;
           }
           // Checking if the recepient has registered.
-            // TODO: Default initialized to 0. Check for that instead?]
           if(exec_num < recepient->get_start_time()) {
               if(verbose) {
                   cout << "At the time of execution, sender and/or recipient have not registered." << "\n";
@@ -450,7 +412,8 @@ class Bank {
             else if (temp.get_fee_payer() == "s") {//shared fee
               r_fee = fee / 2;
               s_fee = fee / 2;
-              if (fee % 2 != 0) {//odd means sender pays the extra cent
+              //odd means sender pays the extra cent
+              if (fee % 2 != 0) {
                 s_fee++;
               }
             }
