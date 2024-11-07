@@ -101,12 +101,17 @@ public:
     User(uint64_t timestamp, string user_ID, string pin, uint64_t balance)
     : timestamp(timestamp), user_ID(user_ID), pin(pin), balance(balance) {}
     // Default Constructor
+    /*
     User(){
         timestamp = 0;
         user_ID = "none";
         pin = "12345";
         balance = 0;
     }
+    */
+    User()
+    : timestamp(0), user_ID("none"), pin("12345"), balance(0) {}
+    
     uint64_t get_start_time() const{
         return timestamp;
     }
